@@ -5,12 +5,43 @@ import './App.css';
 
 function App() {
   const [address, setAddress] = useState('');
+  const [resolvedAddress, setResolvedAddress] = useState('');
   const [nonces, setNonces] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const checkNonces = async () => {
-    if (!ethers.isAddress(address)) {
+  const resolveAddress = async (input) => {
+    setAddress(input);
+    try {
+      // Check if input is ENS name
+      if (input.endsWith('.eth')) {
+        const provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+        const resolved = await provider.resolveName(input);
+        if (resolved) {
+          setResolvedAddress(resolved);
+          setError('');
+          // Automatically check nonces after resolving ENS
+          await checkNoncesForAddress(resolved);
+        } else {
+          setError('Could not resolve ENS name');
+          setResolvedAddress('');
+        }
+      } else {
+        setResolvedAddress(input);
+        // If it's a regular address, check if it's valid and check nonces
+        if (ethers.isAddress(input)) {
+          await checkNoncesForAddress(input);
+        }
+      }
+    } catch (err) {
+      console.error('ENS resolution error:', err);
+      setError('Error resolving ENS name');
+      setResolvedAddress('');
+    }
+  };
+
+  const checkNoncesForAddress = async (addressToCheck) => {
+    if (!ethers.isAddress(addressToCheck)) {
       setError('Invalid Ethereum address');
       return;
     }
@@ -24,7 +55,7 @@ function App() {
         CHAINS.map(async (chain) => {
           try {
             const provider = new ethers.JsonRpcProvider(chain.rpc);
-            const nonce = await provider.getTransactionCount(address);
+            const nonce = await provider.getTransactionCount(addressToCheck);
             return { chain: chain.name, nonce };
           } catch (err) {
             console.error(`Error fetching nonce for ${chain.name}:`, err);
@@ -58,13 +89,19 @@ function App() {
         <input
           type="text"
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter Ethereum address"
+          onChange={(e) => resolveAddress(e.target.value)}
+          placeholder="Enter Ethereum address or ENS name"
         />
-        <button onClick={checkNonces} disabled={loading}>
+        <button onClick={() => checkNoncesForAddress(resolvedAddress)} disabled={loading}>
           {loading ? 'Checking...' : 'Check Nonces'}
         </button>
       </div>
+
+      {resolvedAddress && address.endsWith('.eth') && (
+        <div className="resolved-address">
+          Resolved address: {resolvedAddress}
+        </div>
+      )}
 
       {error && <div className="error">{error}</div>}
 

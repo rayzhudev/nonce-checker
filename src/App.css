@@ -36,6 +36,12 @@ button:disabled {
   margin: 10px 0;
 }
 
+.resolved-address {
+  color: #666;
+  margin: 10px 0;
+  font-family: monospace;
+}
+
 .nonce-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
