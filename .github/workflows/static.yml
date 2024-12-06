@@ -42,7 +42,12 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          PUBLIC_URL: /nonce-checker
         run: npm run build
+
+      - name: List build output
+        run: ls -la build/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
